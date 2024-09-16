@@ -6,49 +6,36 @@ function Loader() {
     const [redirect, setRedirect] = useState(null);
 
     useEffect(() => {
+        const userId = 1234;
         const websocket = new WebSocket('ws://localhost:3001');
-        let timeoutId;
-
+    
+        websocket.onopen = () => {
+            console.log('WebSocket connection opened');
+            fetch('http://localhost:3001/start')
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                    console.log('Fetch successful');
+                })
+                .catch(error => console.error('Fetch Error:', error));
+        };
+    
         websocket.onmessage = (event) => {
             console.log('Received WebSocket message:', event.data);
-
-            if (event.data === 'WEBSOCKET_SUCESS') {
+    
+            if (event.data === `WEBSOCKET_SUCCESS:${userId}`) {
                 setRedirect('/newpage');
-            } else if (event.data === 'WEBSOCKET_TIMEOUT') {
+            }
+            
+            if (event.data === `WEBSOCKET_TIMEOUT:${userId}`) {
                 setRedirect('/timeout');
             }
         };
-
+    
         websocket.onerror = (error) => {
             console.error('WebSocket Error:', error);
         };
-
-        timeoutId = setTimeout(() => {
-            setRedirect('/timeout');
-        }, 30000);
-
-        return () => {
-            clearTimeout(timeoutId);
-            if (websocket) {
-                websocket.close();
-            }
-        };
-    }, []);
-
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const response = await fetch('http://localhost:3001/start');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                console.log('Fetch successful');
-            } catch (error) {
-                console.error('Fetch Error:', error);
-            }
-        };
-
-        fetchData();
+    
+        return () => websocket.close();
     }, []);
 
     if (redirect) {
